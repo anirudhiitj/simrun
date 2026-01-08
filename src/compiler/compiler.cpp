@@ -1,36 +1,34 @@
-// compiler.cpp
 #include <iostream>
-#include <sstream>
-#include "parser/parser.h"
-#include "validator/validator.h"
+#include <fstream>
+#include <nlohmann/json.hpp>
 
-using namespace std;
+using json = nlohmann::json;
 
-int main() {
-    // Read full JSON from stdin (Electron-friendly)
-    stringstream buffer;
-    buffer << cin.rdbuf();
-    string json_input = buffer.str();
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "NOT VALID\n";
+        return 0;
+    }
+
+    std::ifstream in(argv[1]);
+    if (!in) {
+        std::cout << "NOT VALID\n";
+        return 0;
+    }
 
     try {
-        ArchitectureAST ast = parse_json_to_ast(json_input);
-        auto errors = validate_ast(ast);
+        json j;
+        in >> j;
 
-        if (!errors.empty()) {
-            cout << "{ \"status\": \"error\", \"errors\": [";
-            for (size_t i = 0; i < errors.size(); i++) {
-                cout << "{ \"message\": \"" << errors[i].message << "\" }";
-                if (i + 1 < errors.size()) cout << ",";
-            }
-            cout << "] }";
-            return 1;
+        // 🔹 Minimal validation for now
+        if (j.is_object()) {
+            std::cout << "VALID\n";
+        } else {
+            std::cout << "NOT VALID\n";
         }
-
-        cout << "{ \"status\": \"ok\" }";
-        return 0;
-
-    } catch (const exception& e) {
-        cout << "{ \"status\": \"fatal\", \"message\": \"" << e.what() << "\" }";
-        return 1;
+    } catch (...) {
+        std::cout << "NOT VALID\n";
     }
+
+    return 0;
 }
