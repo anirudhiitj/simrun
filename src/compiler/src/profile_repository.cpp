@@ -1,5 +1,6 @@
 #include "profile_repository.h"
 
+<<<<<<< HEAD
 ProfileRepository::ProfileRepository(const string& basePath)
     : basePath(basePath) {}
 
@@ -19,4 +20,17 @@ YAML::Node ProfileRepository::getNetworkProfile(const string& name) {
     auto node = YAML::LoadFile(basePath + "/networks/" + name + ".yaml");
     netCache[name] = node;
     return node;
+=======
+ProfileRepository::ProfileRepository(const string& root)
+    : root(root) {}
+
+YAML::Node ProfileRepository::getComponentProfile(const string& type) {
+    string path = root + "/components/" + type + "/default.yaml";
+    return YAML::LoadFile(path);
+}
+
+YAML::Node ProfileRepository::getNetworkProfile(const string& type) {
+    string path = root + "/networks/" + type + ".yaml";
+    return YAML::LoadFile(path);
+>>>>>>> upstream/compiler
 }

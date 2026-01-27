@@ -4,4 +4,8 @@
 
 using namespace std;
 
+<<<<<<< HEAD
 IR parseIR(const string& raw);
+=======
+IR parseIR(const string& jsonText);
+>>>>>>> upstream/compiler
