@@ -4,31 +4,101 @@ import { InspectorPanel } from '@/components/inspector/InspectorPanel';
 import { CanvasHeader } from '@/components/header/CanvasHeader';
 import { ConfigTabs } from '@/components/panels/ConfigTabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useArchitectureStore } from '@/store/architectureStore';
+import { useSimulationStore } from '@/store/simulationStore';
 import { useState } from "react";
 import { toast } from "sonner";
+import { serializeToIR, wrapForCompiler } from '@/lib/irSerializer';
+import { ComponentCategory } from '@/types/architecture';
+import { ComponentParameters, NetworkParameters, DEFAULT_DATABASE_PARAMS, DEFAULT_CACHE_PARAMS, DEFAULT_API_PARAMS, DEFAULT_NETWORK_PARAMS } from '@/types/simulation';
 
 const Index = () => {
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const { nodes, edges } = useArchitectureStore();
+  const { routes, workload, faults } = useSimulationStore();
+
+  const getDefaultParams = (category: ComponentCategory): ComponentParameters => {
+    switch (category) {
+      case 'database':
+        return DEFAULT_DATABASE_PARAMS;
+      case 'cache':
+        return DEFAULT_CACHE_PARAMS;
+      case 'api':
+        return DEFAULT_API_PARAMS;
+      case 'network':
+        return DEFAULT_NETWORK_PARAMS;
+      default:
+        return DEFAULT_API_PARAMS;
+    }
+  };
 
   const handleRunSimulation = async () => {
-    const projectJson = {
-      test: "demo" // replace later with real canvas export
-    };
+    if (nodes.length === 0) {
+      toast.error("Please add components to the canvas");
+      return;
+    }
 
     try {
-      const result = await window.api.simulate(projectJson);
+      // Build the architecture export from canvas state
+      const exportData = {
+        components: nodes.map((node) => ({
+          id: node.id,
+          type: node.data.category as string,
+          profile: node.data.profile as string,
+          position: node.position,
+          label: node.data.label as string,
+          parameters: {
+            ...getDefaultParams(node.data.category as ComponentCategory),
+            ...(node.data.parameters as ComponentParameters),
+          },
+        })),
+        links: edges.map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          parameters: {
+            ...DEFAULT_NETWORK_PARAMS,
+            ...((edge.data?.parameters as NetworkParameters) || {}),
+          },
+        })),
+        routes,
+        workload,
+        faults,
+        metadata: {
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+        },
+      };
 
-      if (!result) {
-        toast.error("No response from compiler");
-        return;
-      }
+      console.log("📤 [UI] Export data:", exportData);
+      console.log("📤 [UI] Components count:", exportData.components.length);
 
-      setSimulationResult(result);
-      toast.success("Simulation completed 🚀");
+      // Serialize to IR format
+      const ir = serializeToIR(exportData);
+      console.log("📤 [UI] Serialized IR:", ir);
+      console.log("📤 [UI] IR Components:", ir.context.components);
+      
+      const compilerRequest = wrapForCompiler(ir);
+      console.log("📤 [UI] Final request to compiler:", compilerRequest);
 
+      toast.promise(
+        window.api.simulate(compilerRequest),
+        {
+          loading: 'Running simulation...',
+          success: (result) => {
+            console.log("📥 [UI] Response from compiler:", result);
+            setSimulationResult(result);
+            return 'Simulation completed 🚀';
+          },
+          error: (err) => {
+            console.error("📥 [UI] Error from compiler:", err);
+            return 'Compiler error - check console';
+          }
+        }
+      );
     } catch (err) {
-      toast.error("System error: Compiler not reachable");
-      console.error("Simulation failed:", err);
+      console.error("❌ [UI] Failed to prepare simulation:", err);
+      toast.error("Failed to prepare simulation");
     }
   };
 

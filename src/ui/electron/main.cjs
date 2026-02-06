@@ -7,12 +7,15 @@ let compilerProcess = null;
 
 function startCompiler() {
   const compilerPath = path.resolve(__dirname, '../../compiler/compiler.exe');
+  const compilerDir = path.dirname(compilerPath);
 
   console.log("Launching compiler at:", compilerPath);
+  console.log("Working directory:", compilerDir);
 
   compilerProcess = spawn(compilerPath, [], {
     stdio: 'inherit',
-    windowsHide: false
+    windowsHide: true,
+    cwd: compilerDir  // Set working directory to compiler folder
   });
 
   compilerProcess.on('error', (err) => {
@@ -47,8 +50,9 @@ function postToCompiler(data) {
   return new Promise((resolve, reject) => {
     const jsonData = JSON.stringify(data);
 
-    console.log("➡ Sending POST to http://127.0.0.1:8081/compile");
-    console.log("Payload:", jsonData);
+    console.log("\n[Electron Main] ➡ Sending POST to http://127.0.0.1:8081/compile");
+    console.log("[Electron Main] Request body:", JSON.stringify(data, null, 2));
+    console.log("[Electron Main] Payload size:", jsonData.length, "bytes");
 
     const options = {
       hostname: '127.0.0.1',
@@ -62,22 +66,26 @@ function postToCompiler(data) {
     };
 
     const req = http.request(options, (res) => {
-      console.log("⬅ Response status:", res.statusCode);
+      console.log("[Electron Main] ⬅ Response status:", res.statusCode);
 
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
-        console.log("⬅ Raw response body:", body);
+        console.log("[Electron Main] ⬅ Response received");
+        console.log("[Electron Main] Raw response body:", body);
         try {
-          resolve(JSON.parse(body));
+          const parsed = JSON.parse(body);
+          console.log("[Electron Main] ✅ Response parsed successfully");
+          resolve(parsed);
         } catch {
+          console.error("[Electron Main] ❌ Failed to parse response as JSON");
           resolve({ status: "error", raw: body });
         }
       });
     });
 
     req.on('error', (err) => {
-      console.error("HTTP request failed:", err.message);
+      console.error("[Electron Main] ❌ HTTP request failed:", err.message);
       reject(err);
     });
 
