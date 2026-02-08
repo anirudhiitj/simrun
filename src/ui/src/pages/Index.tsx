@@ -14,6 +14,8 @@ import { ComponentParameters, NetworkParameters, DEFAULT_DATABASE_PARAMS, DEFAUL
 
 const Index = () => {
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [isOutputMinimized, setIsOutputMinimized] = useState(false);
+  const [isOutputClosed, setIsOutputClosed] = useState(false);
   const { nodes, edges } = useArchitectureStore();
   const { routes, workload, faults } = useSimulationStore();
 
@@ -70,34 +72,36 @@ const Index = () => {
         },
       };
 
-      console.log("📤 [UI] Export data:", exportData);
-      console.log("📤 [UI] Components count:", exportData.components.length);
+      console.log("[UI] Export data:", exportData);
+      console.log("[UI] Components count:", exportData.components.length);
 
       // Serialize to IR format
       const ir = serializeToIR(exportData);
-      console.log("📤 [UI] Serialized IR:", ir);
-      console.log("📤 [UI] IR Components:", ir.context.components);
+      console.log("[UI] Serialized IR:", ir);
+      console.log("[UI] IR Components:", ir.context.components);
       
       const compilerRequest = wrapForCompiler(ir);
-      console.log("📤 [UI] Final request to compiler:", compilerRequest);
+      console.log("[UI] Final request to compiler:", compilerRequest);
 
       toast.promise(
         window.api.simulate(compilerRequest),
         {
           loading: 'Running simulation...',
           success: (result) => {
-            console.log("📥 [UI] Response from compiler:", result);
+            console.log("[UI] Response from compiler:", result);
             setSimulationResult(result);
-            return 'Simulation completed 🚀';
+            setIsOutputClosed(false);
+            setIsOutputMinimized(false);
+            return 'Simulation completed';
           },
           error: (err) => {
-            console.error("📥 [UI] Error from compiler:", err);
+            console.error("[UI] Error from compiler:", err);
             return 'Compiler error - check console';
           }
         }
       );
     } catch (err) {
-      console.error("❌ [UI] Failed to prepare simulation:", err);
+      console.error("[UI] Failed to prepare simulation:", err);
       toast.error("Failed to prepare simulation");
     }
   };
@@ -124,11 +128,43 @@ const Index = () => {
         </div>
 
         {/* Simulation Result Overlay */}
-        {simulationResult && (
-          <div className="absolute bottom-4 left-4 right-4 max-h-64 overflow-auto bg-black/80 text-white text-xs p-4 rounded-lg border border-white/20 z-50">
-            <h3 className="font-bold mb-2">Simulation Output</h3>
-            <pre>{JSON.stringify(simulationResult, null, 2)}</pre>
+        {simulationResult && !isOutputClosed && (
+          <div className={`absolute bottom-4 left-4 right-4 bg-black/80 text-white text-xs rounded-lg border border-white/20 z-50 transition-all ${
+            isOutputMinimized ? 'h-10' : 'max-h-64'
+          }`}>
+            <div className="flex items-center justify-between p-4">
+              <h3 className="font-bold">Simulation Output</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsOutputMinimized(!isOutputMinimized)}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors"
+                >
+                  {isOutputMinimized ? 'Expand' : 'Minimize'}
+                </button>
+                <button
+                  onClick={() => setIsOutputClosed(true)}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            {!isOutputMinimized && (
+              <div className="px-4 pb-4 overflow-auto max-h-56">
+                <pre>{JSON.stringify(simulationResult, null, 2)}</pre>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Floating button to reopen output */}
+        {simulationResult && isOutputClosed && (
+          <button
+            onClick={() => setIsOutputClosed(false)}
+            className="absolute bottom-4 left-4 px-4 py-2 bg-black/80 text-white text-xs font-medium rounded-lg border border-white/20 hover:bg-black/90 transition-colors z-50"
+          >
+            View Output
+          </button>
         )}
       </div>
     </TooltipProvider>

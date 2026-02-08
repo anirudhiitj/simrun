@@ -33,7 +33,7 @@ int main() {
         }
         
         string path = compileIR(ir);
-        std::cout << "✅ Compilation successful! Output: " << path << std::endl;
+        std::cout << "Compilation successful! Output: " << path << std::endl;
 
         ifstream in(path);
         stringstream ss;
@@ -43,12 +43,12 @@ int main() {
         res.code = 200;
         res.set_header("Content-Type", "application/json");
         res.body = ss.str();
-        std::cout << "📤 Sending response (HTTP 200)" << std::endl;
+        std::cout << "Sending response (HTTP 200)" << std::endl;
         return res;
 
     } catch (const runtime_error& e) {
         // VALIDATION / USER ERROR
-        std::cerr << "❌ VALIDATION ERROR: " << e.what() << std::endl;
+        std::cerr << "VALIDATION ERROR: " << e.what() << std::endl;
         return crow::response(
             400,
             string("Validation error: ") + e.what()
@@ -56,7 +56,7 @@ int main() {
 
     } catch (const exception& e) {
         // INTERNAL ERROR
-        std::cerr << "❌ INTERNAL ERROR: " << e.what() << std::endl;
+        std::cerr << "INTERNAL ERROR: " << e.what() << std::endl;
         return crow::response(
             500,
             string("Internal compiler error: ") + e.what()

@@ -23,19 +23,19 @@ YAML::Node ProfileRepository::getComponentProfile(const string& type) {
         path = root + "/components/" + type + "/default.yaml";
     }
     
-    std::cout << "📖 Loading component profile for type '" << type << "': " << path << std::endl;
+    std::cout << "Loading component profile for type '" << type << "': " << path << std::endl;
     
     if (!fs::exists(path)) {
-        std::cerr << "❌ Profile file not found: " << path << std::endl;
+        std::cerr << "Profile file not found: " << path << std::endl;
         throw std::runtime_error("bad file: " + path);
     }
     
     try {
         YAML::Node profile = YAML::LoadFile(path);
-        std::cout << "✅ Loaded profile successfully" << std::endl;
+        std::cout << "Loaded profile successfully" << std::endl;
         return profile;
     } catch (const YAML::Exception& e) {
-        std::cerr << "❌ Error loading YAML: " << e.what() << std::endl;
+        std::cerr << "Error loading YAML: " << e.what() << std::endl;
         throw std::runtime_error(string("YAML error in ") + path + ": " + e.what());
     }
 }
@@ -43,19 +43,19 @@ YAML::Node ProfileRepository::getComponentProfile(const string& type) {
 YAML::Node ProfileRepository::getNetworkProfile(const string& type) {
     string path = root + "/networks/" + type + ".yaml";
     
-    std::cout << "📖 Loading network profile: " << path << std::endl;
+    std::cout << "Loading network profile: " << path << std::endl;
     
     if (!fs::exists(path)) {
-        std::cerr << "❌ Profile file not found: " << path << std::endl;
+        std::cerr << "Profile file not found: " << path << std::endl;
         throw std::runtime_error("bad file: " + path);
     }
     
     try {
         YAML::Node profile = YAML::LoadFile(path);
-        std::cout << "✅ Loaded profile successfully" << std::endl;
+        std::cout << "Loaded profile successfully" << std::endl;
         return profile;
     } catch (const YAML::Exception& e) {
-        std::cerr << "❌ Error loading YAML: " << e.what() << std::endl;
+        std::cerr << "Error loading YAML: " << e.what() << std::endl;
         throw std::runtime_error(string("YAML error in ") + path + ": " + e.what());
     }
 }

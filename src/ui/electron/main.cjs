@@ -75,17 +75,17 @@ function postToCompiler(data) {
         console.log("[Electron Main] Raw response body:", body);
         try {
           const parsed = JSON.parse(body);
-          console.log("[Electron Main] ✅ Response parsed successfully");
+          console.log("[Electron Main] Response parsed successfully");
           resolve(parsed);
         } catch {
-          console.error("[Electron Main] ❌ Failed to parse response as JSON");
+          console.error("[Electron Main] Failed to parse response as JSON");
           resolve({ status: "error", raw: body });
         }
       });
     });
 
     req.on('error', (err) => {
-      console.error("[Electron Main] ❌ HTTP request failed:", err.message);
+      console.error("[Electron Main] HTTP request failed:", err.message);
       reject(err);
     });
 

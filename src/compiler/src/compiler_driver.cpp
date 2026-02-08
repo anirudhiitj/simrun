@@ -17,15 +17,15 @@ string compileIR(IR& ir) {
     }
 
     // PROFILE RESOLUTION
-    std::cout << "📁 Current working directory: " << fs::current_path().string() << std::endl;
+    std::cout << "Current working directory: " << fs::current_path().string() << std::endl;
     
     string profilesPath = "./profiles";
     if (!fs::exists(profilesPath)) {
-        std::cerr << "❌ Profiles directory not found at: " << fs::absolute(profilesPath).string() << std::endl;
+        std::cerr << "Profiles directory not found at: " << fs::absolute(profilesPath).string() << std::endl;
         throw runtime_error("Profiles directory not found at: " + fs::absolute(profilesPath).string());
     }
     
-    std::cout << "✅ Profiles directory found at: " << fs::absolute(profilesPath).string() << std::endl;
+    std::cout << "Profiles directory found at: " << fs::absolute(profilesPath).string() << std::endl;
     
     ProfileRepository repo(profilesPath);
     ProfileResolver resolver(repo);
