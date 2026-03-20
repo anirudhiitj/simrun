@@ -1,51 +1,98 @@
 #include <iostream>
-#include "ir_parser.h"
-#include "event_initializer.h"
+#include <chrono>
+#include <nlohmann/json.hpp>
 
-#include "simulation_context.h"
-#include "entity_factory.h"
-#include "event_factory.h"
-#include "scheduler.h"
-#include "simulator.h"
+#include "src/ir_parser.h"
+#include "src/event_initializer.h"
+#include "src/simulation_context.h"
+#include "factory/factory.h"
+#include "core/scheduler.h"
+#include "core/simulator.h"
+#include "core/event_queue.h"
 
 int main(int argc, char** argv) {
 
-    /* ---------- Parse IR ---------- */
-    IR ir = IRParser::parseFromFile(argv[1]);
+    if (argc < 2) {
+        nlohmann::json err;
+        err["status"] = "error";
+        err["phase"]  = "init";
+        err["message"] = "Usage: simrun <ir_file.json>";
+        std::cout << err.dump() << std::endl;
+        return 1;
+    }
 
-    /* ---------- Global Context ---------- */
-    SimulationContext ctx(
-        ir.header.seed,
-        ir.header.time_unit
-    );
+    auto wall_start = std::chrono::steady_clock::now();
 
-    /* ---------- Factories ---------- */
-    EntityFactory entityFactory(ctx);
-    EventFactory eventFactory(ctx);
+    try {
+        /* ---------- Parse IR ---------- */
+        IR ir = IRParser::parseFromFile(argv[1]);
 
-    /* ---------- Build Static World ---------- */
-    entityFactory.createComponents(ir.components);
-    entityFactory.createLinks(ir.links);
+        /* ---------- Global Context ---------- */
+        SimulationContext ctx(
+            ir.header.seed,
+            ir.header.time_unit
+        );
 
+        /* ---------- Factory ---------- */
+        EntityFactory entityFactory(ctx);
 
-    entityFactory.applyInitialComponentState(ir.initial_components);
-    entityFactory.applyInitialLinkState(ir.initial_links);
+        /* ---------- Build Static World ---------- */
+        entityFactory.createComponents(ir.components);
+        entityFactory.createLinks(ir.links);
 
-    entityFactory.registerRequestTypes(ir.request_types);
+        entityFactory.applyComponentContext(ir.components_context);
+        entityFactory.applyLinkContext(ir.links_context);
 
-    /* ---------- Scheduler ---------- */
-    Scheduler scheduler;
+        entityFactory.registerRequestTypes(ir.request_types);
 
-    /* ---------- Seed Initial Events ---------- */
-    EventInitializer::seedInitialEvents(
-        ir,
-        scheduler,
-        eventFactory
-    );
+        /* ---------- Event Queue & Scheduler ---------- */
+        auto queue = createPriorityEventQueue();
+        EventScheduler scheduler(*queue);
 
-    /* ---------- Run Simulation ---------- */
-    Simulator sim(ctx, scheduler);
-    sim.run();
+        /* ---------- Seed Initial Events ---------- */
+        EventInitializer::seedInitialEvents(
+            ir,
+            scheduler,
+            entityFactory
+        );
+
+        /* ---------- Run Simulation ---------- */
+        Simulator sim(*queue, ctx);
+        sim.run();
+
+        auto wall_end = std::chrono::steady_clock::now();
+        auto wall_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            wall_end - wall_start).count();
+
+        /* ---------- Build Result JSON ---------- */
+        nlohmann::json result;
+        result["status"]   = "completed";
+        result["phase"]    = "simulation";
+        result["wall_time_ms"] = wall_ms;
+        result["sim_time_final"] = sim.now();
+        result["seed"] = ir.header.seed;
+
+        result["world"]["components_count"] = ctx.components.size();
+        result["world"]["links_count"]      = ctx.links.size();
+        result["world"]["request_types_count"] = ctx.request_types.size();
+        result["world"]["initial_events_count"] = ir.initial_events.size();
+
+        /* stdout is the IPC channel — only JSON goes here */
+        std::cout << result.dump() << std::endl;
+
+    } catch (const std::exception& e) {
+        auto wall_end = std::chrono::steady_clock::now();
+        auto wall_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            wall_end - wall_start).count();
+
+        nlohmann::json err;
+        err["status"]  = "error";
+        err["phase"]   = "simulation";
+        err["message"] = e.what();
+        err["wall_time_ms"] = wall_ms;
+        std::cout << err.dump() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

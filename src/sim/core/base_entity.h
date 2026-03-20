@@ -1,13 +1,13 @@
 #pragma once
-#include <string>
+#include <cstdint>
 
 class BaseEntity {
 public:
-    explicit BaseEntity(std::string id_) : entity_id(std::move(id_)) {}
+    explicit BaseEntity(uint32_t id_) : entity_id(id_) {}
     virtual ~BaseEntity() = default;
 
-    const std::string& id() const { return entity_id; }
+    uint32_t id() const { return entity_id; }
 
 private:
-    std::string entity_id;
+    uint32_t entity_id;
 };

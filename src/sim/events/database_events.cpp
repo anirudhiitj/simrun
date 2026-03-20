@@ -1,11 +1,13 @@
 #include "database_events.h"
 
-#include "database.h"
-#include "scheduler.h"
-#include "request.h"
-#include "rng.h"
+#include "../entities/database.h"
+#include "../entities/request.h"
+#include "../core/scheduler.h"
+#include "../core/rng.h"
+#include "../src/simulation_context.h"
 
 #include <algorithm>
+#include <memory>
 
 /* ================= Utilities ================= */
 
@@ -41,6 +43,12 @@ double db_sample_seek_latency(
             db->base_variance_seek_ms,
             seed
         );
+    } else {
+        latency = lognormal_dist(
+            db->base_median_seek_ms,
+            db->base_variance_seek_ms,
+            seed
+        );
     }
 
     if (latency < 0.0)
@@ -53,15 +61,16 @@ double db_sample_seek_latency(
 void db_reject_request(
     Database* db,
     Request* req,
-    EventScheduler& scheduler
+    double now
 ) {
     db->rejected_requests++;
     req->status = RequestStatus::REJECTED;
-    req->finish_time = scheduler.now();
+    req->finish_time = static_cast<SimTime>(now);
 }
 
 void db_try_dispatch(
     Database* db,
+    SimulationContext& ctx,
     EventScheduler& scheduler,
     double now,
     uint64_t& seed
@@ -70,7 +79,7 @@ void db_try_dispatch(
         return;
 
     Request* req = db->queue.front();
-    int required_tokens = req->is_write ? 2 : 1;
+    uint32_t required_tokens = req->is_write ? 2 : 1;
 
     if (db->active_requests >= db->max_concurrency ||
         db->tokens < required_tokens)
@@ -82,14 +91,10 @@ void db_try_dispatch(
 
     double latency = db_sample_seek_latency(db, seed);
 
-    scheduler.schedule(
-        scheduler.entityFactory().createEvent(
-            EventType::DB_REQUEST_SEND,
-            now + latency,
-            seed,
-            req
-        )
+    auto ev = std::make_unique<DBRequestSendEvent>(
+        now + latency, seed, db, req
     );
+    scheduler.schedule(std::move(ev));
 }
 
 /* ================= Constructors ================= */
@@ -101,7 +106,7 @@ DBRequestArrivalEvent::DBRequestArrivalEvent(
     Request* req_
 ) {
     type = EventType::DB_REQUEST_ARRIVAL;
-    timestamp = ts;
+    timestamp = static_cast<SimTime>(ts);
     seed = seed_;
     db = db_;
     request = req_;
@@ -114,7 +119,7 @@ DBRequestSendEvent::DBRequestSendEvent(
     Request* req_
 ) {
     type = EventType::DB_REQUEST_SEND;
-    timestamp = ts;
+    timestamp = static_cast<SimTime>(ts);
     seed = seed_;
     db = db_;
     request = req_;
@@ -122,10 +127,10 @@ DBRequestSendEvent::DBRequestSendEvent(
 
 /* ================= Event execution ================= */
 
-void DBRequestArrivalEvent::execute(EventScheduler& scheduler) {
-    db_update_tokens(db, timestamp);
+void DBRequestArrivalEvent::execute(SimulationContext& ctx, EventScheduler& scheduler) {
+    db_update_tokens(db, static_cast<double>(timestamp));
 
-    int required_tokens = request->is_write ? 2 : 1;
+    uint32_t required_tokens = request->is_write ? 2 : 1;
 
     if (db->active_requests < db->max_concurrency &&
         db->tokens >= required_tokens) {
@@ -136,46 +141,42 @@ void DBRequestArrivalEvent::execute(EventScheduler& scheduler) {
         double latency =
             db_sample_seek_latency(db, seed);
 
-        scheduler.schedule(
-            scheduler.entityFactory().createEvent(
-                EventType::DB_REQUEST_SEND,
-                timestamp + latency,
-                seed,
-                request
-            )
+        auto ev = std::make_unique<DBRequestSendEvent>(
+            static_cast<double>(timestamp) + latency,
+            seed,
+            db,
+            request
         );
+        scheduler.schedule(std::move(ev));
         return;
     }
 
-    if (db->queue.size() < db->queue_capacity) {
+    if (static_cast<uint32_t>(db->queue.size()) < db->queue_capacity) {
         db->queue.push(request);
         return;
     }
 
-    db_reject_request(db, request, scheduler);
+    db_reject_request(db, request, static_cast<double>(timestamp));
 }
 
-//this event is sending req from QUEUE to
-void DBRequestSendEvent::execute(EventScheduler& scheduler) {
+void DBRequestSendEvent::execute(SimulationContext& ctx, EventScheduler& scheduler) {
     db->active_requests--;
 
-    db_update_tokens(db, timestamp);
+    db_update_tokens(db, static_cast<double>(timestamp));
 
     db_try_dispatch(
         db,
+        ctx,
         scheduler,
-        timestamp,
+        static_cast<double>(timestamp),
         seed
     );
 
-    request->db_finish_time = scheduler.now();  //fix this db_finish_time updating 
+    request->db_finish_time = timestamp;
     request->seed = seed;
 
-    if (Event* next =
-        request->create_next_event(
-            scheduler.now(),
-            seed
-        )) {
-        scheduler.schedule(next);
+    Event* next = request->create_next_event(timestamp, seed);
+    if (next) {
+        scheduler.schedule(std::unique_ptr<Event>(next));
     }
 }

@@ -1,10 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include "events.h"
+#include "event_types.h"
 
-#include "event.h"
-
-// Forward declarations
 class Database;
 class EventScheduler;
 struct Request;
@@ -21,14 +20,15 @@ double db_sample_seek_latency(
 void db_reject_request(
     Database* db,
     Request* req,
-    EventScheduler& scheduler
+    double now
 );
 
 void db_try_dispatch(
     Database* db,
+    SimulationContext& ctx,
     EventScheduler& scheduler,
     double now,
-    uint64_t seed
+    uint64_t& seed
 );
 
 /* ================= Events ================= */
@@ -44,7 +44,7 @@ struct DBRequestArrivalEvent : public Event {
         Request* req
     );
 
-    void execute(EventScheduler& scheduler) override;
+    void execute(SimulationContext& ctx, EventScheduler& scheduler) override;
 };
 
 struct DBRequestSendEvent : public Event {
@@ -58,5 +58,5 @@ struct DBRequestSendEvent : public Event {
         Request* req
     );
 
-    void execute(EventScheduler& scheduler) override;
+    void execute(SimulationContext& ctx, EventScheduler& scheduler) override;
 };

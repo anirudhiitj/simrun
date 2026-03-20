@@ -12,3 +12,5 @@ public:
     virtual std::unique_ptr<Event> pop() = 0;
     virtual bool empty() const = 0;
 };
+
+std::unique_ptr<EventQueue> createPriorityEventQueue();

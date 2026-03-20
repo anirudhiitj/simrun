@@ -1,20 +1,20 @@
 #pragma once
 
-#include "event.h"
+#include "events.h"
+#include <cstdint>
 
-class Request;
-class Simulator;
+struct Request;
 
 class RequestArrivalAtLinkEvent : public Event {
 public:
     RequestArrivalAtLinkEvent(
-        double time,
+        SimTime time,
         uint32_t link_id,
         uint32_t dst_component_id,
         Request* req
     );
 
-    void execute(Simulator& sim) override;
+    void execute(SimulationContext& ctx, EventScheduler& scheduler) override;
 
 private:
     uint32_t link_id;

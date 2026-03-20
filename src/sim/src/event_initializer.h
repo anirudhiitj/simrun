@@ -1,22 +1,14 @@
 #pragma once
 #include "ir_types.h"
 
-class Scheduler;
-class EventFactory;
+class EventScheduler;
+class EntityFactory;
 
 class EventInitializer {
 public:
     static void seedInitialEvents(
         const IR& ir,
-        Scheduler& scheduler,
-        EventFactory& eventFactory
+        EventScheduler& scheduler,
+        EntityFactory& factory
     );
-
-    // fix @aradhya
-    Request* createRequestObject(
-        EventType type,
-        double timestamp,
-        const nlohmann::json& payload
-    );
-
 };

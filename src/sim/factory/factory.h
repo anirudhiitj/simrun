@@ -4,16 +4,21 @@
 #include <memory>
 #include <vector>
 
-#include "../context/simulation_context.h"
-#include "../ir/ir_types.h"
+#include "../src/simulation_context.h"
+#include "../src/ir_types.h"
+#include "../events/event_types.h"
 
-// Components
+// Entities
 #include "../entities/service.h"
 #include "../entities/database.h"
 #include "../entities/cache.h"
+#include "../entities/network_link.h"
 
-// Links
-#include "../network/network_link.h"
+// Events
+#include "../events/database_events.h"
+
+class Event;
+struct Request;
 
 class EntityFactory {
 public:
@@ -22,7 +27,6 @@ public:
     void createComponents(const std::vector<IRComponent>& components);
     void createLinks(const std::vector<IRLink>& links);
 
-    /* Initial state */
     void applyComponentContext(
         const std::vector<IRComponentContext>& context
     );
@@ -31,38 +35,32 @@ public:
         const std::vector<IRLinkContext>& context
     );
 
-    /* Request types */
     void registerRequestTypes(
         const std::vector<IRRequestType>& request_types
     );
 
-private:
-    SimulationContext& ctx;
-
-    /* Componenet Helpers */
-    void createService(const IRComponent& c);
-    void createDatabase(const IRComponent& c);
-    void createCache(const IRComponent& c);
-
-
-    /* -------- Events -------- */
-    Event* createEvent(
+    /* -------- Event creation -------- */
+    std::unique_ptr<Event> createEvent(
         EventType type,
         double timestamp,
         uint64_t seed,
         Request* req
     );
 
-    Event* createDBRequestArrival(
-        double ts,
-        uint64_t seed,
-        Request* req
-    );
-    
-    Event* createDBRequestSend(
-        double ts,
-        uint64_t seed,
-        Request* req
+private:
+    SimulationContext& ctx;
+
+    /* Component helpers */
+    void createService(const IRComponent& c);
+    void createDatabase(const IRComponent& c);
+    void createCache(const IRComponent& c);
+
+    /* Event helpers */
+    std::unique_ptr<Event> createDBRequestArrival(
+        double ts, uint64_t seed, Request* req
     );
 
+    std::unique_ptr<Event> createDBRequestSend(
+        double ts, uint64_t seed, Request* req
+    );
 };

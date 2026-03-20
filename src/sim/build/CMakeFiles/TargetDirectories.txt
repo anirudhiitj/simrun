@@ -1,0 +1,3 @@
+C:/Users/Admin/Desktop/simrun/src/sim/build/CMakeFiles/simrun.dir
+C:/Users/Admin/Desktop/simrun/src/sim/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Admin/Desktop/simrun/src/sim/build/CMakeFiles/ZERO_CHECK.dir

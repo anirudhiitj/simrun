@@ -5,23 +5,23 @@ Database::Database(uint32_t id, const nlohmann::json& params)
     : BaseEntity(id)
 {
     /* ---------- Seek latency config ---------- */
-    seek_model = params.at("seek_model").get<std::string>();
+    seek_model = params.value("seek_model", std::string("lognormal"));
     base_median_seek_ms =
-        params.at("base_median_seek_ms").get<double>();
+        params.value("base_median_seek_ms", 4.0);
     base_variance_seek_ms =
-        params.at("base_variance_seek_ms").get<double>();
+        params.value("base_variance_seek_ms", 0.5);
 
     /* ---------- Token bucket config ---------- */
     max_iops =
-        params.at("max_iops").get<uint32_t>();
+        params.value("max_iops", 3000u);
     bucket_capacity =
-        params.at("bucket_capacity").get<uint32_t>();
+        params.value("bucket_capacity", 6000u);
 
     /* ---------- Concurrency / queue config ---------- */
     max_concurrency =
-        params.at("max_concurrency").get<uint32_t>();
+        params.value("max_concurrency", 1000u);
     queue_capacity =
-        params.at("queue_capacity").get<uint32_t>();
+        params.value("queue_capacity", 3000u);
 
     /* ---------- Runtime state ---------- */
     active_requests = params.value("active", 0u);

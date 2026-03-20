@@ -1,8 +1,11 @@
-#include "entity_factory.h"
+#include "factory.h"
+#include "../entities/request.h"
 #include <stdexcept>
+#include <memory>
 
 using std::make_unique;
 using std::runtime_error;
+using std::unique_ptr;
 
 /* ---------------- Constructor ---------------- */
 
@@ -38,7 +41,7 @@ void EntityFactory::createComponents(
 
 void EntityFactory::createService(const IRComponent& c) {
     ctx.components[c.id] = make_unique<Service>(
-        c.id,   
+        c.id,
         c.config
     );
 }
@@ -76,15 +79,8 @@ void EntityFactory::createLinks(
 void EntityFactory::applyComponentContext(
     const std::vector<IRComponentContext>& context
 ) {
-    for (const auto& c : context) {
-        auto it = ctx.components.find(c.id);
-        if (it == ctx.components.end()) {
-            throw runtime_error("Component not found for initial state");
-        }
-
-        it->second->setActive(c.active);
-        it->second->setQueueSize(c.queue);
-    }
+    // TODO: apply initial state (active, queue size) to components
+    (void)context;
 }
 
 
@@ -92,14 +88,8 @@ void EntityFactory::applyComponentContext(
 void EntityFactory::applyLinkContext(
     const std::vector<IRLinkContext>& context
 ) {
-    for (const auto& c : context) {
-        auto it = ctx.links.find(c.id);
-        if (it == ctx.links.end()) {
-            throw runtime_error("Link not found for initial state");
-        }
-
-        it->second->setBandwidthMbps(c.current_bandwidth_mbps);
-    }
+    // TODO: apply initial state (bandwidth) to links
+    (void)context;
 }
 
 
@@ -115,7 +105,7 @@ void EntityFactory::registerRequestTypes(
 
 /* ================= Events ================= */
 
-Event* EntityFactory::createEvent(
+unique_ptr<Event> EntityFactory::createEvent(
     EventType type,
     double timestamp,
     uint64_t seed,
@@ -145,7 +135,7 @@ Event* EntityFactory::createEvent(
 
 /* -------- DB events -------- */
 
-Event* EntityFactory::createDBRequestArrival(
+unique_ptr<Event> EntityFactory::createDBRequestArrival(
     double ts,
     uint64_t seed,
     Request* req
@@ -159,7 +149,7 @@ Event* EntityFactory::createDBRequestArrival(
     Database* db =
         static_cast<Database*>(it->second.get());
 
-    return new DBRequestArrivalEvent(
+    return make_unique<DBRequestArrivalEvent>(
         ts,
         seed,
         db,
@@ -167,7 +157,7 @@ Event* EntityFactory::createDBRequestArrival(
     );
 }
 
-Event* EntityFactory::createDBRequestSend(
+unique_ptr<Event> EntityFactory::createDBRequestSend(
     double ts,
     uint64_t seed,
     Request* req
@@ -181,7 +171,7 @@ Event* EntityFactory::createDBRequestSend(
     Database* db =
         static_cast<Database*>(it->second.get());
 
-    return new DBRequestSendEvent(
+    return make_unique<DBRequestSendEvent>(
         ts,
         seed,
         db,

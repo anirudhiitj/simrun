@@ -1,24 +1,23 @@
 #include "simulator.h"
 #include "event_queue.h"
-#include "../events/event.h"
+#include "../events/events.h"
+#include "../src/simulation_context.h"
 
 Simulator::Simulator(
     EventQueue& q,
-    const Context& ctx,
-    State& st
+    SimulationContext& ctx
 )
     : queue(q),
       scheduler(q),
-      context(ctx),
-      state(st) {}
+      ctx(ctx) {}
 
 void Simulator::run() {
     while (!queue.empty()) {
         auto event = queue.pop();
 
-        current_time = event->time;
+        current_time = event->timestamp;
 
-        event->execute(context, state, scheduler);
+        event->execute(ctx, scheduler);
     }
 }
 

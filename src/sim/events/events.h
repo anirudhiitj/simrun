@@ -1,16 +1,19 @@
-// events/event.h
 #pragma once
-#include <cstdint>
+#include "../core/sim_types.h"
+#include "event_types.h"
 
-using SimTime = uint64_t;
+class SimulationContext;
+class EventScheduler;
 
 class Event {
 public:
+    EventType type  = EventType::UNKNOWN;
+    SimTime timestamp = 0;
+    uint64_t seed     = 0;
+
     virtual ~Event() = default;
 
-    // When this event is scheduled to run
-    virtual SimTime time() const = 0;
+    SimTime time() const { return timestamp; }
 
-    // What happens when the event fires
-    virtual void execute() = 0;
+    virtual void execute(SimulationContext& ctx, EventScheduler& scheduler) = 0;
 };

@@ -2,10 +2,9 @@
 #pragma once
 
 #include "events.h"
+#include <memory>
 
-// Forward declarations (avoid heavy includes in headers)
-class ApiService;
-class Simulator;
+class Service;
 
 /*
  * Event 1: RequestArrival
@@ -16,19 +15,12 @@ class Simulator;
  */
 class RequestArrivalEvent : public Event {
 public:
-    RequestArrivalEvent(
-        SimTime t,
-        ApiService* service,
-        Simulator* sim
-    );
+    RequestArrivalEvent(SimTime t, Service* service);
 
-    SimTime time() const override;
-    void execute() override;
+    void execute(SimulationContext& ctx, EventScheduler& scheduler) override;
 
 private:
-    SimTime t;
-    ApiService* service;
-    Simulator* sim;
+    Service* service;
 };
 
 
@@ -40,17 +32,10 @@ private:
  */
 class RequestProcessingEvent : public Event {
 public:
-    RequestProcessingEvent(
-        SimTime t,
-        ApiService* service,
-        Simulator* sim
-    );
+    RequestProcessingEvent(SimTime t, Service* service);
 
-    SimTime time() const override;
-    void execute() override;
+    void execute(SimulationContext& ctx, EventScheduler& scheduler) override;
 
 private:
-    SimTime t_;
-    ApiService* service_;
-    Simulator* sim_;
+    Service* service_;
 };

@@ -1,0 +1,10 @@
+^C:\USERS\ADMIN\DESKTOP\SIMRUN\SRC\SIM\BUILD\CMAKEFILES\4B84DAADB0E5B6CD9774DFB235AA37A0\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Admin/Desktop/simrun/src/sim -BC:/Users/Admin/Desktop/simrun/src/sim/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Admin/Desktop/simrun/src/sim/build/simrun.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

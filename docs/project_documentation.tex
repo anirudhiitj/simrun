@@ -1,0 +1,238 @@
+% SIMRUN Project Documentation
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\geometry{margin=1in}
+
+% Document metadata
+\title{SIMRUN -- Project Documentation\\\large Simulation of Really Unpredictable Nonsense}
+\author{SIMRUN Contributors}
+\date{\today}
+
+\begin{document}
+
+% Title page
+\maketitle
+\thispagestyle{empty}
+\vfill
+\begin{center}
+  \textbf{Repository overview}\\
+  Top-level layout: `src/` contains `ui/`, `compiler/`, `sim/`, `analysis/` and tooling such as `vcpkg/`.
+\end{center}
+\newpage
+
+% Table of contents (index)
+\tableofcontents
+\newpage
+
+% Start of main documentation
+\section{Problem Statement}
+
+SIMRUN is a research and engineering project whose goal is to provide a flexible environment to design, compile and run architecture-driven simulations of distributed systems. The project name expands as: \emph{Simulation of Really Unpredictable Nonsense}.
+
+The core problems addressed by SIMRUN are:
+- Provide a visual UI to design component-based architectures and simulation scenarios.
+- Serialize architecture designs into a stable intermediate representation (IR) consumable by a C++ compiler/backend.
+- Offer a reproducible simulation engine that executes compiled scenarios and returns structured results.
+- Enable rapid development and iterative testing via an Electron-wrapped UI with hot-reload.
+
+\section{Deliverables}
+
+This documentation describes the deliverables that accompany the repository and expected artifacts after a full build:
+
+- UI: A React + TypeScript application, packaged and runnable via Electron. Development mode supports hot-reload and live simulation calls.
+- Compiler/Server: A C++ component (built with CMake and vcpkg) which accepts serialized IR, compiles or interprets it and runs simulation tasks. It may expose a local server interface used by the UI to request simulations.
+- Simulation Engine: C++ modules implementing domain entities, factories and the runtime used to execute the generated scenarios.
+- Analysis Tools: Utility programs that inspect `final_ir.json` and other intermediate results for verification, metrics and visualization.
+- Documentation: This LaTeX document and source README/HOWTO files providing build and run instructions.
+
+\newpage
+
+\section{Repository Layout and Responsibilities}
+
+The repository is organized to separate concerns between frontend, compiler/backend and simulation runtime. The high-level layout:
+
+\begin{itemize}
+  \item `src/ui/` -- React + TypeScript UI, Vite build system, Electron wrapper, UI components and stores.
+  \item `src/compiler/` -- C++ compiler backend; CMake project. Consumes serialized IR and produces runnable artifacts or orchestrates simulations.
+  \item `src/sim/` -- C++ simulation engine; contains `core/`, `entities/`, `events/`, `factory/` and other runtime modules.
+  \item `src/analysis/` -- Analysis and tooling to inspect IR and final outputs.
+  \item `vcpkg/` -- vcpkg bootstrap and portfiles used for C++ dependency management.
+\end{itemize}
+
+\subsection{Key files referenced}
+\begin{longtable}{p{0.25\linewidth} p{0.7\linewidth}}
+`README.md` & Project title and short overview.\\
+`HOWTO_RUN.txt` & Step-by-step developer guide for UI-only and full (UI + compiler) workflows.\\
+`src/ui/package.json` & Shows UI scripts such as `electron:dev` and `electron`.\\
+`src/ui/src/pages/Index.tsx` & Main page that composes the canvas and runs simulation by sending IR to the compiler.\\
+`src/compiler/CMakeLists.txt` & Top-level CMake configuration for the compiler backend.\\
+`src/sim/` & C++ simulation entry points and modules (engine, entities, factories).\\
+\end{longtable}
+
+\newpage
+
+\section{UI Frontend}
+
+The UI is implemented using React + TypeScript with Vite for fast iteration. Key technologies include Tailwind CSS, shadcn-ui components, and a state management layer exposed as stores.
+
+\subsection{Main UX flow}
+
+Users design architectures on a canvas using drag-drop components. Each component includes a `category` (e.g., `api`, `database`, `cache`, `network`) and parameter presets. The UI composes an export object containing components, links, routes, workload and faults.
+
+\subsection{Example: serialization and run path}
+The UI performs the following steps when a user clicks \textit{Run Simulation} (sequence observed in `src/ui/src/pages/Index.tsx`):
+
+\begin{enumerate}
+  \item Gather components (`nodes`) and links (`edges`) from the architecture store.
+  \item Compose an export object with components, links, routes, workload and metadata.
+  \item Call `serializeToIR(exportData)` to generate an intermediate representation.
+  \item Wrap the IR into a compiler request with `wrapForCompiler(ir)`.
+  \item Invoke `window.api.simulate(compilerRequest)` using Electron's IPC/native bridge.
+\end{enumerate}
+
+\subsection{Scripts and development commands}
+The UI `package.json` includes the following helpful npm scripts:
+\begin{verbatim}
+  "dev": "vite",
+  "build": "vite build",
+  "build:dev": "vite build --mode development",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "electron": "electron .",
+  "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\""
+\end{verbatim}
+
+`electron:dev` starts the Vite dev server and launches Electron once the UI host is ready, enabling hot reload.
+
+\newpage
+
+\section{Electron Integration}
+
+Electron is used to package the web UI as a desktop application and to provide a secure IPC layer to the C++ components. The UI uses an exposed API on `window.api` for requesting simulations. Typical flow:
+
+\begin{itemize}
+  \item Development: `npm run electron:dev` (starts Vite and Electron together).
+  \item Production: `npm run build` then `npm run electron` packages and launches the app.
+\end{itemize}
+
+Electron bridges the renderer (React) and native capabilities (filesystem, child processes) and is therefore the place to route `simulate` requests from the renderer to either a bundled compiler binary or a local compiler server.
+
+\section{Compiler / Server (C++)}
+
+The compiler backend is a C++ CMake project under `src/compiler/`. It is responsible for:
+
+\begin{itemize}
+  \item Validating and parsing the IR produced by the UI.
+  \item Translating IR to simulation instructions or native code consumed by the simulation engine.
+  \item Optionally exposing an HTTP/IPC server to accept simulation requests (the HOWTO references a port such as 8081).
+  \item Returning structured results to the UI (JSON-like payloads) containing event traces, metrics and error reports.
+\end{itemize}
+
+Build notes (excerpted from HOWTO_RUN.txt): use CMake and vcpkg toolchain; on Windows prefer the Visual Studio generator; on Linux set `CMAKE_BUILD_TYPE=Release` and build with `-j$(nproc)`.
+
+\subsection{Server considerations}
+If the compiler exposes a long-lived server (for quicker iteration), ensure:
+
+\begin{itemize}
+  \item Authentication is restricted to local requests only (bind to localhost).
+  \item Service detects and reports malformed IR with helpful diagnostics.
+  \item Process isolation when invoking heavy simulation tasks to avoid blocking the server thread.
+\end{itemize}
+
+\newpage
+
+\section{Simulation Engine: `src/sim/`}
+
+The simulation engine contains the runtime implementation of the component models, event scheduling and metrics collection. Typical subdirectories include:
+
+\begin{itemize}
+  \item `core/` -- central scheduler, timebase, common utilities.
+  \item `entities/` -- component implementations (API servers, databases, caches, network links).
+  \item `events/` -- event types and handlers used by the scheduler.
+  \item `factory/` -- factories responsible for constructing entity instances based on IR entries.
+\end{itemize}
+
+The factory mechanism maps the IR `components` entries into runtime entity instances with parameterized behavior. This supports swapping implementations (for example, different database models) while reusing the same IR.
+
+\subsection{Entity design notes}
+
+Entities should follow these design principles:
+
+\begin{itemize}
+  \item Clear separation between configuration (parameters) and runtime state.
+  \item Well-defined event interfaces for communication (messages, requests, responses).
+  \item Deterministic scheduling when required for reproducible experiments.
+\end{itemize}
+
+\newpage
+
+\section{IR (Intermediate Representation) and APIs}
+
+The IR is the canonical interchange format between the UI and the compiler/simulation backend. It typically contains:
+
+\begin{itemize}
+  \item `context.components`: list of component descriptors (id, type, parameters, profile).
+  \item `links`: network connections and their parameters.
+  \item `routes`, `workload`, `faults`: scenario-level specifications.
+  \item `metadata`: version, timestamp and provenance information.
+\end{itemize}
+
+Example IR flow from `Index.tsx`:
+\begin{verbatim}
+  const ir = serializeToIR(exportData);
+  const compilerRequest = wrapForCompiler(ir);
+  window.api.simulate(compilerRequest)
+\end{verbatim}
+
+When designing the IR, prefer a stable schema (use a versioned `metadata.version`) and include explicit validation rules to keep evolution manageable.
+
+\section{Build and Run Instructions (Concise)}
+
+The `HOWTO_RUN.txt` file documents both UI-only and full setups. Minimal quick start (UI only):
+
+\begin{verbatim}
+cd src/ui
+npm install
+npm run electron:dev
+\end{verbatim}
+
+Full build (compiler + UI) generally follows the steps below (Windows flavor):
+
+\begin{verbatim}
+cd src/compiler
+mkdir build && cd build
+cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=..\..\vcpkg\scripts\buildsystems\vcpkg.cmake ..
+cmake --build . --config Release
+\end{verbatim}
+
+After building the compiler, run the UI as above and use the Electron app to trigger simulations.
+
+\newpage
+
+\section{Appendix: Design Recommendations and Next Steps}
+
+This project is organized to support iterative development. Recommended next steps and best practices:
+
+\begin{itemize}
+  \item Add schema tests for the IR and unit tests for `serializeToIR` and `wrapForCompiler`.
+  \item Add CI steps to build the compiler with vcpkg and to run UI linting and type checks.
+  \item Document the compiler server API (endpoints, request/response examples and error codes).
+  \item Provide example scenario files (IR samples) under `docs/examples/` for quick experimentation.
+\end{itemize}
+
+\vfill
+\begin{center}
+  Generated documentation for SIMRUN. For more details see the repository `README.md` and `HOWTO_RUN.txt`.
+\end{center}
+
+\end{document}

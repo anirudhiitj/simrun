@@ -4,7 +4,7 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
-#include "base_entity.h"
+#include "../core/base_entity.h"
 
 class Cache : public BaseEntity {
 public:

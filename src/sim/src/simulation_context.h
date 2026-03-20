@@ -4,10 +4,10 @@
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <nlohmann/json.hpp>
 
-#include "../entities/component.h"
-#include "../network/network_link.h"
-#include "../request/request.h"
+#include "../core/base_entity.h"
+#include "../entities/network_link.h"
 
 class SimulationContext {
 public:
@@ -19,9 +19,9 @@ public:
     std::string time_unit;
 
     /* ---------- World ---------- */
-    std::unordered_map<uint32_t, std::unique_ptr<Component>> components;
+    std::unordered_map<uint32_t, std::unique_ptr<BaseEntity>> components;
     std::unordered_map<uint32_t, std::unique_ptr<NetworkLink>> links;
 
     /* ---------- Requests ---------- */
-    std::unordered_map<std::string, json> request_types;
+    std::unordered_map<std::string, nlohmann::json> request_types;
 };

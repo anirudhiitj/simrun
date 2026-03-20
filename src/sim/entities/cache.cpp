@@ -5,13 +5,13 @@ Cache::Cache(uint32_t id, const nlohmann::json& params)
 {
     /* -------- Cache config -------- */
     base_cache_hit_probability =
-        params.at("base_cache_hit_probability").get<double>();
+        params.value("base_cache_hit_probability", 0.7);
 
     base_cache_hit_latency =
-        params.at("base_cache_hit_latency").get<double>();
+        params.value("base_cache_hit_latency", 0.3);
 
     base_cache_miss_latency =
-        params.at("base_cache_miss_latency").get<double>();
+        params.value("base_cache_miss_latency", 0.1);
 
     /* -------- Initial runtime state -------- */
     hits = 0;

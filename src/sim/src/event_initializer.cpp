@@ -1,30 +1,18 @@
 #include "event_initializer.h"
-#include "scheduler.h"
-#include "entity_factory.h"
-#include "../request/request.h"
+#include "../core/scheduler.h"
+#include "../factory/factory.h"
+#include "../entities/request.h"
 
 void EventInitializer::seedInitialEvents(
     const IR& ir,
-    Scheduler& scheduler,
+    EventScheduler& scheduler,
     EntityFactory& factory
 ) {
     for (const auto& e : ir.initial_events) {
-
-        /* ---------- Build request object ---------- */
-        Request* req = createRequestObject(
-            e.type,
-            e.time,
-            e.payload
-        );
-
-        /* ---------- Create event ---------- */
-        Event* ev = factory.createEvent(
-            e.type,
-            e.time,
-            e.seed,
-            req
-        );
-
-        scheduler.schedule(ev);
+        // TODO: build proper Request objects from IR event payload
+        // and create appropriate events via factory
+        (void)e;
+        (void)scheduler;
+        (void)factory;
     }
 }

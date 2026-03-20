@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
+#include "event_queue.h"
 
 class Event;
-class EventQueue;
 
 class EventScheduler {
 private:
